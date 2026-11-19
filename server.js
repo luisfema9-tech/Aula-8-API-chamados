@@ -3,15 +3,13 @@ const sqlite3 = require('sqlite3');
 const { open } = require('sqlite');
 
 const app = express();
-app.use(express.json()); // faz o servidor entender JSON no body
+app.use(express.json()); 
 
-let db; // aqui fica a conexão com o banco
+let db; 
 
-// valores permitidos
 const PRIORIDADES = ['baixa', 'media', 'alta'];
 const STATUS = ['aberto', 'em_andamento', 'concluido'];
 
-// conecta no banco e cria a tabela (se ainda não existir)
 async function iniciarBanco() {
   db = await open({
     filename: './database.sqlite',
@@ -32,14 +30,11 @@ async function iniciarBanco() {
   console.log('Banco conectado e tabela chamados pronta.');
 }
 
-// ---------- validações (usadas no POST e no PUT) ----------
-
-// true se não for texto ou se estiver vazio
 function vazio(valor) {
   return typeof valor !== 'string' || valor.trim() === '';
 }
 
-// devolve uma mensagem de erro, ou null se estiver tudo certo
+
 function validarChamado({ titulo, descricao, prioridade, status }) {
   if (vazio(titulo) || vazio(descricao) || vazio(prioridade)) {
     return 'titulo, descricao e prioridade são obrigatórios.';
@@ -53,7 +48,7 @@ function validarChamado({ titulo, descricao, prioridade, status }) {
     return "Prioridade inválida. Use: 'baixa', 'media' ou 'alta'.";
   }
 
-  // o status é opcional, mas se vier precisa ser válido
+
   if (status !== undefined && !STATUS.includes(status)) {
     return "Status inválido. Use: 'aberto', 'em_andamento' ou 'concluido'.";
   }
@@ -61,9 +56,7 @@ function validarChamado({ titulo, descricao, prioridade, status }) {
   return null; // tudo certo
 }
 
-// ---------- ROTAS ----------
 
-// POST /chamados -> cria um novo chamado
 app.post('/chamados', async (req, res) => {
   const dados = req.body || {};
 
@@ -86,7 +79,7 @@ app.post('/chamados', async (req, res) => {
   }
 });
 
-// GET /chamados -> lista todos
+
 app.get('/chamados', async (req, res) => {
   try {
     const chamados = await db.all('SELECT * FROM chamados ORDER BY id');
@@ -97,7 +90,6 @@ app.get('/chamados', async (req, res) => {
   }
 });
 
-// GET /chamados/:id -> busca um
 app.get('/chamados/:id', async (req, res) => {
   const id = Number(req.params.id);
 
@@ -115,25 +107,22 @@ app.get('/chamados/:id', async (req, res) => {
   }
 });
 
-// PUT /chamados/:id -> atualiza
 app.put('/chamados/:id', async (req, res) => {
   const id = Number(req.params.id);
   const dados = req.body || {};
 
   try {
-    // 1) o chamado existe?
+    
     const existente = await db.get('SELECT * FROM chamados WHERE id = ?', [id]);
     if (!existente) {
       return res.status(404).json({ erro: 'Chamado não encontrado.' });
     }
 
-    // 2) os dados enviados são válidos?
     const erroValidacao = validarChamado(dados);
     if (erroValidacao) {
       return res.status(400).json({ erro: erroValidacao });
     }
 
-    // 3) atualiza (se não vier status, mantém o que já estava)
     await db.run(
       'UPDATE chamados SET titulo = ?, descricao = ?, prioridade = ?, status = ? WHERE id = ?',
       [
@@ -153,7 +142,6 @@ app.put('/chamados/:id', async (req, res) => {
   }
 });
 
-// DELETE /chamados/:id -> remove
 app.delete('/chamados/:id', async (req, res) => {
   const id = Number(req.params.id);
 
@@ -171,7 +159,6 @@ app.delete('/chamados/:id', async (req, res) => {
   }
 });
 
-// só liga o servidor depois que o banco estiver pronto (deixe sempre por último)
 iniciarBanco()
   .then(() => {
     app.listen(3000, () => {
